@@ -178,9 +178,9 @@ describe('env enforcer tests', () => {
   describe('verifyEnv', () => {
     test.each(possibleValidations)(
       'check if %o validates %o correctly to %j',
-      (envOverride, envChecker, partialMessage) => {
+      async (envOverride, envChecker, partialMessage) => {
         process.env = envOverride;
-        const builtResponse = verifyEnv(envChecker);
+        const builtResponse = await verifyEnv(envChecker);
         builtResponse.forEach((value, indexOfValue) => {
           expect(value.message).toBe(partialMessage[indexOfValue].message);
           expect(value.isValid).toBe(partialMessage[indexOfValue].isValid);
@@ -229,71 +229,81 @@ describe('env enforcer tests', () => {
         ],
       ],
     ];
-    test('should call info if infoLogger is set w/ valid conf', () => {
+    test('should call info if infoLogger is set w/ valid conf', async () => {
       const overRider = {
         infoLogger: jest.fn(),
       };
       const [[validEnv, validConf], []] = validAndInvalid;
       process.env = validEnv;
-      envMiddleware(validConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(validConf, overRider)(reqMock, resMock, nextMock);
       expect(overRider.infoLogger).toBeCalledTimes(2);
     });
-    test('should call info if infoLogger is set w/o valid conf', () => {
+    test('should call info if infoLogger is set w/o valid conf', async () => {
       const overRider = {
         infoLogger: jest.fn(),
       };
       const [[], [invalidEnv, invalidConf]] = validAndInvalid;
       process.env = invalidEnv;
-      envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
       expect(overRider.infoLogger).toBeCalledTimes(1);
       expect(resMock.status).toHaveBeenLastCalledWith(500);
     });
-    test('should not call error if errorLogger is set w/ valid conf', () => {
+    test('should not call error if errorLogger is set w/ valid conf', async () => {
       const overRider = {
         errorLogger: jest.fn(),
       };
       const [[validEnv, validConf], []] = validAndInvalid;
       process.env = validEnv;
-      envMiddleware(validConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(validConf, overRider)(reqMock, resMock, nextMock);
       expect(overRider.errorLogger).toBeCalledTimes(0);
     });
-    test('should call error if errorLogger is set w/o valid conf', () => {
+    test('should call error if errorLogger is set w/o valid conf', async () => {
       const overRider = {
         errorLogger: jest.fn(),
       };
       const [[], [invalidEnv, invalidConf]] = validAndInvalid;
       process.env = invalidEnv;
-      envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
       expect(overRider.errorLogger).toHaveBeenLastCalledWith(`The value failed a direct check
  validator: tester
  value: test`);
       expect(resMock.status).toHaveBeenLastCalledWith(500);
     });
-    test('should not set status if shouldUpdateStatus is set w/ valid conf', () => {
+    test('should not set status if shouldUpdateStatus is set w/ valid conf', async () => {
       const overRider = {
         shouldUpdateStatus: false,
       };
       const [[validEnv, validConf], []] = validAndInvalid;
       process.env = validEnv;
-      envMiddleware(validConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(validConf, overRider)(reqMock, resMock, nextMock);
       expect(resMock.status).toBeCalledTimes(0);
     });
-    test('should set status if shouldUpdateStatus is set w/o valid conf', () => {
+    test('should set status if shouldUpdateStatus is set w/o valid conf', async () => {
       const overRider = {
         shouldUpdateStatus: true,
       };
       const [[], [invalidEnv, invalidConf]] = validAndInvalid;
       process.env = invalidEnv;
-      envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
       expect(resMock.status).toHaveBeenLastCalledWith(500);
     });
-    test('pass error to next if shouldThrow is set', () => {
+    test('should set status code if shouldUpdateStatus and statusCode is set w/o valid conf', async () => {
+      const overRider = {
+        shouldUpdateStatus: true,
+        statusCode: 419,
+      };
+      const [[], [invalidEnv, invalidConf]] = validAndInvalid;
+      process.env = invalidEnv;
+      await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
+      expect(resMock.status).toHaveBeenLastCalledWith(419);
+    });
+    test('pass error to next if shouldThrow is set', async () => {
       const overRider = {
         shouldThrow: true,
       };
       const [[], [invalidEnv, invalidConf]] = validAndInvalid;
       process.env = invalidEnv;
-      envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
+      await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
       expect(resMock.status).toHaveBeenLastCalledWith(500);
       expect(nextMock).toHaveBeenCalledTimes(1);
     });
