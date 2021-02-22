@@ -287,6 +287,16 @@ describe('env enforcer tests', () => {
       await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
       expect(resMock.status).toHaveBeenLastCalledWith(500);
     });
+    test('should set status code if shouldUpdateStatus and statusCode is set w/o valid conf', async () => {
+      const overRider = {
+        shouldUpdateStatus: true,
+        statusCode: 419,
+      };
+      const [[], [invalidEnv, invalidConf]] = validAndInvalid;
+      process.env = invalidEnv;
+      await envMiddleware(invalidConf, overRider)(reqMock, resMock, nextMock);
+      expect(resMock.status).toHaveBeenLastCalledWith(419);
+    });
     test('pass error to next if shouldThrow is set', async () => {
       const overRider = {
         shouldThrow: true,

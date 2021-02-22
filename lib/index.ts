@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars,import/no-unresolved */
 import { NextFunction, Request, Response } from 'express';
 
 export type PossibleValidator = string | number |
@@ -13,6 +13,7 @@ export interface Overrides {
   errorLogger?: (msg: string) => void
   shouldThrow?: boolean
   updateStatus?: boolean
+  statusCode?: number
 }
 
 export interface ValidationResponse {
@@ -90,7 +91,7 @@ export const verifyEnv = async (envConfig : EnvConfig) : Promise<ValidationRespo
  */
 export const envMiddleware = (envConfig : EnvConfig, overrides?: Overrides) => {
   if (overrides?.infoLogger) overrides.infoLogger('Validating env via env-enforcer middleware');
-  return async (request: Request, response: Response, next: NextFunction) : void => {
+  return async (request: Request, response: Response, next: NextFunction) : Promise<void> => {
     const validatedEnv = await verifyEnv(envConfig);
     const envIsValid = validatedEnv.every(({ isValid }) => isValid);
     if (!envIsValid) {
@@ -101,7 +102,7 @@ export const envMiddleware = (envConfig : EnvConfig, overrides?: Overrides) => {
           message}\n validator: ${validator}\n value: ${keyToCheck}`,
       ).filter(Boolean);
       const shouldUpdateStatus = overrides?.updateStatus ?? true;
-      if (shouldUpdateStatus) response.status(500);
+      if (shouldUpdateStatus) response.status(overrides?.statusCode || 500);
       if (overrides?.errorLogger) overrides.errorLogger(errorMessages.join('\n\n'));
       if (overrides?.shouldThrow) {
         return next(new Error(errorMessages.join('\n\n')));

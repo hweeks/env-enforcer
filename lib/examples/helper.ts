@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable no-console */
 import express, {
   NextFunction, Request, Response, Express,
 } from 'express';

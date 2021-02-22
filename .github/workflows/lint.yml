@@ -32,6 +32,8 @@ jobs:
         run: yarn lint
       - name: Test code
         run: yarn test
+      - name: Build code
+        run: yarn tsc
       - name: Lint commit
         run: yarn commitlint $( git log -1 --pretty=format:"%s" )
 
