@@ -42,7 +42,7 @@ export interface EnvConfig {
 }
 ```
 
-So a number/string or an array of them, a RegEx check, or a function that will be passed the key value and expects a boolean return; true if valid, false if invalid.
+So a number/string or an array of them, a RegEx check, or a function that will be passed the key value and expects a boolean return; true if valid, false if invalid. The return function is async and allows the passing of promise based validation functions.
 
 ## Middleware Overrides
 
@@ -57,7 +57,7 @@ export interface Overrides {
 }
 ```
 
-We give you the ability to add info and error logs, override the default status setting of 500 or at all, and allow you to set it to 'throw' or pass an error to the `NextFunction` from express, triggering your final error catching middleware.
+We give you the ability to add info and error logs, override the default status setting of 500 or at all, and allow you to set it to 'throw' or pass an error to the `NextFunction` from express, triggering your final error catching middleware. Our implementation uses the `next` callback to process your validation. Make sure you're using next and middleware in the prescribed way.
 
 ## Examples
 

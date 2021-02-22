@@ -29,7 +29,7 @@ export type EnvMiddleware = (request: Request, response: Response, next: NextFun
  *
  * @param envConfig the built matcher for your env
  */
-export const verifyEnv = (envConfig : EnvConfig) : ValidationResponse[] => {
+export const verifyEnv = async (envConfig : EnvConfig) : Promise<ValidationResponse[]> => {
   const { env } = process;
   if (Object.keys(envConfig).length === 0) {
     return [{
@@ -37,46 +37,50 @@ export const verifyEnv = (envConfig : EnvConfig) : ValidationResponse[] => {
       message: 'No validation passed to helper.',
     }];
   }
-  return Object.entries(envConfig).map(([key, value]) => {
-    const keyToCheck = env[key];
-    if (keyToCheck === undefined) {
-      return {
-        isValid: false,
-        message: 'The key or validator did not exist.',
-      };
-    }
-    if (value instanceof RegExp) {
-      return {
-        isValid: keyToCheck.match(value) !== null,
-        message: 'The key failed a RegExp match.',
-        validator: value,
-        keyToCheck,
-      };
-    }
-    if (typeof value === 'function') {
-      return {
-        isValid: value(keyToCheck),
-        message: 'The key failed a custom matcher function.',
-        validator: value.toString(),
-        keyToCheck,
-      };
-    }
-    if (Array.isArray(value)) {
-      return {
+  const processingArray = Object.entries(envConfig).map(
+    async ([key, value]) : Promise<ValidationResponse> => {
+      const keyToCheck = env[key];
+      if (keyToCheck === undefined) {
+        return {
+          isValid: false,
+          message: 'The key or validator did not exist.',
+        };
+      }
+      if (value instanceof RegExp) {
+        return {
+          isValid: keyToCheck.match(value) !== null,
+          message: 'The key failed a RegExp match.',
+          validator: value,
+          keyToCheck,
+        };
+      }
+      if (typeof value === 'function') {
+        return {
+          isValid: await value(keyToCheck),
+          message: 'The key failed a custom matcher function.',
+          validator: value.toString(),
+          keyToCheck,
+        };
+      }
+      if (Array.isArray(value)) {
+        return {
         // eslint-disable-next-line eqeqeq
-        isValid: value.some((possibleMatch : string | number) => keyToCheck == possibleMatch),
-        message: 'The key was not included in the array you passed to match against.',
+          isValid: value.some((possibleMatch : string | number) => keyToCheck == possibleMatch),
+          message: 'The key was not included in the array you passed to match against.',
+          validator: value,
+          keyToCheck,
+        };
+      }
+      return {
+        isValid: value === keyToCheck,
+        message: 'The value failed a direct check',
         validator: value,
         keyToCheck,
       };
-    }
-    return {
-      isValid: value === keyToCheck,
-      message: 'The value failed a direct check',
-      validator: value,
-      keyToCheck,
-    };
-  });
+    },
+  );
+  const processedResults = await Promise.all(processingArray);
+  return processedResults;
 };
 
 /**
@@ -86,8 +90,8 @@ export const verifyEnv = (envConfig : EnvConfig) : ValidationResponse[] => {
  */
 export const envMiddleware = (envConfig : EnvConfig, overrides?: Overrides) => {
   if (overrides?.infoLogger) overrides.infoLogger('Validating env via env-enforcer middleware');
-  return (request: Request, response: Response, next: NextFunction) : void => {
-    const validatedEnv = verifyEnv(envConfig);
+  return async (request: Request, response: Response, next: NextFunction) : void => {
+    const validatedEnv = await verifyEnv(envConfig);
     const envIsValid = validatedEnv.every(({ isValid }) => isValid);
     if (!envIsValid) {
       const errorMessages = validatedEnv.map(
